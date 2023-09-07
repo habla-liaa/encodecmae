@@ -1,2 +1,1 @@
-# encodecmae
-Codebase for the paper 'EncodecMAE: Leveraging neural codecs for universal audio representation learning'
+Codebase for the paper 'EnCodecMAE: Leveraging neural codecs for universal audio representation learning'
