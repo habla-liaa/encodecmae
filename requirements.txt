@@ -1,4 +1,4 @@
-huggingface_hub>=0.16.4
+huggingface_hub
 encodec==0.1.1
 ginpipe==0.0.1
 librosa>=0.10.1
