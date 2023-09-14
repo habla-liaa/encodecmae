@@ -3,6 +3,7 @@ import torch
 import math
 import gin
 
+###Code from TIMM:
 def drop_path(x, drop_prob: float = 0., training: bool = False, scale_by_keep: bool = True):
     """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks).
     This is the same as the DropConnect impl I created for EfficientNet, etc networks, however,
@@ -67,6 +68,7 @@ class SinusoidalPositionalEmbeddings(nn.Module):
         pe[:,:, 1::2] = torch.cos(position.float() * div_term)
         return x+self.scale*pe
 
+### Transformer implementation with ResiDual normalization. See 'ResiDual: Transformer with Dual Residual Connections' - Xie et al.
 class TransformerLayer(nn.Module):
     def __init__(self, model_dim, attention_layer, ff_layer, norm_layer, 
                  norm_type='ResiDual', cross_attention_layer=None, drop_path=0, init_values=None):

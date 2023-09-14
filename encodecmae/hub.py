@@ -1,5 +1,5 @@
 from huggingface_hub import hf_hub_download
-from encodecmae.tasks.models import EncodecMAE
+from .tasks.models import EncodecMAE
 from ginpipe.core import gin_configure_externals
 import gin
 import torch
