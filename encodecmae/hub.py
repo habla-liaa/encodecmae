@@ -20,7 +20,7 @@ def load_model(model,mode='eval',device='cuda:0'):
     gin_configure_externals(flag)
     gin.parse_config_file(config_file)
     model = get_model()()
-    ckpt = torch.load(ckpt_file)
+    ckpt = torch.load(ckpt_file, map_location='cpu')
     model.load_state_dict(ckpt['state_dict'])
     gin.clear_config()
     if mode=='eval':
