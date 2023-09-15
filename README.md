@@ -1,7 +1,7 @@
 ### EnCodecMAE: Leveraging neural codecs for universal audio representation learning
 
 <p align="center">
-    <a href="">
+    <a href="http://arxiv.org/abs/2309.07391">
         <img alt="read the paper" src="https://img.shields.io/badge/Read_the_paper-2ea44f">
     </a>
     <a href="https://colab.research.google.com/drive/123Zn6h0DRVcjsLFp8Xl4j0PZlZ-7VsK2?usp=sharing">
