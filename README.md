@@ -1,4 +1,4 @@
-<h2 align="center">EnCodecMAE: Leveraging neural codecs for universal audio representation learning</h1>
+<h2 align="center">EnCodecMAE: Leveraging neural codecs for universal audio representation learning</h2>
 
 <p align="center">
     <a href="http://arxiv.org/abs/2309.07391">
