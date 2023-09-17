@@ -1,0 +1,74 @@
+SEED=42
+TRAIN_BATCH_SIZE=128
+VAL_BATCH_SIZE=8
+TRAIN_DATALOADER_NUM_WORKERS=8
+VAL_DATALOADER_NUM_WORKERS=4
+MAX_AUDIO_DURATION=4
+MAX_LR=0.0001
+GRAD_ACC=1
+TOTAL_PRETRAIN_STEPS=500000
+CHECKPOINT_INTERVAL=50000
+INITIAL_CHECKPOINT='last'
+VAL_SET_SIZE=200
+FILTER_AUDIO_LENGTH=10000 #Some files might be too long according to mediainfo so they are discarded.
+DEVICE=[0]
+PRECISION=16
+
+$keys_not_saved=['datasets','dataloaders']
+
+execute_pipeline:
+    tasks = [@tasks.utils.set_seed,
+             @tasks.data.load_dataset,
+             @tasks.data.get_dataloaders,
+             @tasks.fit_model]
+    execution_order = 'sequential'
+
+train/torch.utils.data.DataLoader:
+    shuffle=True
+    batch_size=%TRAIN_BATCH_SIZE
+    num_workers=%TRAIN_DATALOADER_NUM_WORKERS
+    collate_fn=@tasks.data.dynamic_pad_batch
+    
+val/torch.utils.data.DataLoader:
+    shuffle=False
+    batch_size=%VAL_BATCH_SIZE
+    num_workers=%VAL_DATALOADER_NUM_WORKERS
+    collate_fn=@tasks.data.dynamic_pad_batch
+
+tasks.fit_model:
+    trainer_cls=@pl.Trainer
+    from_checkpoint=%INITIAL_CHECKPOINT
+    checkpoint_folder='pretrain_checkpoints'
+
+pl.Trainer:
+    logger=@pl.loggers.CSVLogger()
+    devices=%DEVICE
+    callbacks=[@pl.callbacks.ModelCheckpoint(), @pl.callbacks.LearningRateMonitor()]
+    max_steps=%TOTAL_PRETRAIN_STEPS
+    accelerator='gpu'
+    accumulate_grad_batches=%GRAD_ACC
+    num_sanity_val_steps=1
+    val_check_interval=%CHECKPOINT_INTERVAL
+    precision=%PRECISION
+
+pl.callbacks.ModelCheckpoint:
+    dirpath=%OUTPUT_DIR
+    every_n_train_steps=%CHECKPOINT_INTERVAL
+    save_top_k=-1 #Keep all the checkpoints
+
+pl.loggers.CSVLogger:
+    save_dir=%OUTPUT_DIR
+    name='pretrain_logs'
+
+tasks.data.get_dataloaders.split_function=@tasks.data.dataset_random_split
+tasks.data.get_dataloaders.dataset_cls={'train': @train/tasks.data.DictDataset, 'validation': @val/tasks.data.DictDataset}
+tasks.data.get_dataloaders.dataloader_cls={'train': @train/torch.utils.data.DataLoader, 'validation': @val/torch.utils.data.DataLoader}
+
+tasks.data.dataset_random_split:
+    proportions={'train':-1,'validation':%VAL_SET_SIZE}
+
+tasks.data.DictDataset.index_mapper=@tasks.data.compensate_lengths
+tasks.data.compensate_lengths.chunk_length=%MAX_AUDIO_DURATION #This will sample long audios multiple times during one epoch (duration//compensate_framing times)
+
+tasks.data.load_dataset.filters=[@tasks.data.remove_long_audios]
+tasks.data.remove_long_audios.limit=%FILTER_AUDIO_LENGTH

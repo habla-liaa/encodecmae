@@ -24,16 +24,9 @@ class TimeGapMask:
                 mask[i,valid_start_idxs[0]:valid_start_idxs[0]+n_masked_i-ml[i]]=0
         mask = torch.from_numpy(mask).to(x.device)
         return mask
-
-    def create_even_mask(self,x,mask_size,mask_length,xlens):
-        from IPython import embed; embed()
     
     def mask(self,x,xlens):
         padding_mask = (torch.arange(0, x.shape[1], device=x.device).unsqueeze(0)) >= (xlens.unsqueeze(1))
-        #padding_mask = torch.zeros((x.shape[0],x.shape[1]),dtype=bool,device=x.device)
-        #from IPython import embed; embed()
-        #for i,l in enumerate(xlens):
-        #    padding_mask[i,l:]=1
         mask = self.create_mask(x,self.mask_amount,self.gap_size,xlens)
         visibles = []
         for i in range(mask.shape[0]):
@@ -42,16 +35,11 @@ class TimeGapMask:
         maxlen = max(visible_lens)
         visible = torch.stack([torch.nn.functional.pad(xi,(0,0,0,maxlen-xi.shape[0])) for xi in visibles])
         visible_padding_mask = (torch.arange(0,visible.shape[1],device=visible.device).unsqueeze(0)) >= torch.tensor(visible_lens, device=visible.device).unsqueeze(1)
-        #visible_padding_mask = torch.zeros((visible.shape[0],visible.shape[1]),dtype=bool, device=visible.device)
-        #for i,l in enumerate(visible_lens):
-        #    visible_padding_mask[i,l:] = 1
 
         return mask, ~mask, visible, visible_lens, visible_padding_mask
     
     def unmask(self,x,mask,feature_padding_mask,visible_padding_mask):
         unmasked = torch.zeros((mask.shape[0],mask.shape[1],x.shape[-1]), dtype=x.dtype, device=x.device)
-        try:
-            unmasked[(~mask & ~feature_padding_mask)] = x[~visible_padding_mask]
-        except:
-            from IPython import embed; embed()
+        unmasked[(~mask & ~feature_padding_mask)] = x[~visible_padding_mask]
+
         return unmasked

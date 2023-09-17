@@ -1,0 +1,55 @@
+NUM_ENCODEC_TARGETS=8
+NUM_TOTAL_TARGETS=8
+NUM_TARGET_TOKENS=1024
+MASK_GAP_SIZE=15
+MASK_PROP=0.5
+MODEL_DIM=768
+NUM_ENCODER_LAYERS=10
+NUM_ENCODER_HEADS=12
+NUM_DECODER_LAYERS=2
+NUM_DECODER_HEADS=12
+MASKED_LOSS_WEIGHT=0.9
+tasks.fit_model.model_cls=@tasks.models.EncodecMAE
+tasks.models.EncodecMAE:
+    wav_encoder = @tasks.models.encodecmae.encoders.EncodecEncoder
+    target_encoder = @tasks.models.encodecmae.targets.EncodecQuantizer
+    masker = @tasks.models.encodecmae.masking.TimeGapMask
+    visible_encoder = @encoder/tasks.models.transformers.TransformerEncoder
+    positional_encoder = @tasks.models.transformers.SinusoidalPositionalEmbeddings
+    decoder = @decoder/tasks.models.transformers.TransformerEncoder
+    head = @tasks.models.encodecmae.heads.FrameLevelClassificationHead
+    optimizer=@torch.optim.AdamW
+    lr_scheduler=None
+    masked_weight=%MASKED_LOSS_WEIGHT
+    quantizer_weights=[0.22407463, 0.1759858 , 0.14499009, 0.12150037, 0.10315603, 0.08831368, 0.07608274, 0.06589669]
+torch.optim.AdamW:
+    lr=%MAX_LR
+    betas=(0.9,0.95)
+    weight_decay=0.05
+tasks.models.encodecmae.targets.EncodecQuantizer:
+    n = %NUM_ENCODEC_TARGETS
+tasks.models.encodecmae.masking.TimeGapMask:
+    gap_size = %MASK_GAP_SIZE
+    mask_prop = %MASK_PROP
+encoder/tasks.models.transformers.TransformerEncoder:
+    model_dim=%MODEL_DIM
+    num_layers=%NUM_ENCODER_LAYERS
+    attention_layer=@encoder/tasks.models.transformers.MultiHeadAttention
+    compile=True
+encoder/tasks.models.transformers.MultiHeadAttention:
+    model_dim=%MODEL_DIM
+    num_heads=%NUM_ENCODER_HEADS
+decoder/tasks.models.transformers.TransformerEncoder:
+    model_dim=%MODEL_DIM
+    num_layers=%NUM_DECODER_LAYERS
+    attention_layer=@decoder/tasks.models.transformers.MultiHeadAttention
+    compile=True
+decoder/tasks.models.transformers.MultiHeadAttention:
+    model_dim=%MODEL_DIM
+    num_heads=%NUM_DECODER_HEADS
+tasks.models.transformers.SinusoidalPositionalEmbeddings.embedding_dim = %MODEL_DIM
+tasks.models.encodecmae.heads.FrameLevelClassificationHead:
+    model_dim=%MODEL_DIM
+    num_tokens=%NUM_TARGET_TOKENS
+    num_streams=%NUM_TOTAL_TARGETS
+    

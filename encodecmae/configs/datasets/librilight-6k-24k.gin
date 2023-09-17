@@ -1,0 +1,3 @@
+load_dataset.reader_fn+=[@librilight_6k_24k/read_audiodir]
+librilight_6k_24k/read_audiodir.dataset_path='/workspace/datasets/librilight_med_24k'
+librilight_6k_24k/read_audiodir.dataset='librilight'

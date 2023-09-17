@@ -1,0 +1,3 @@
+load_dataset.reader_fn+=[@fma_large_24k/read_audiodir]
+fma_large_24k/read_audiodir.dataset_path='/workspace/datasets/fma_large_24k'
+fma_large_24k/read_audiodir.dataset='fma'

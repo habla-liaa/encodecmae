@@ -1,0 +1,3 @@
+load_dataset.reader_fn+=[@audioset_unbalanced_24k/read_audiodir]
+audioset_unbalanced_24k/read_audiodir.dataset_path='/workspace/datasets/audioset_24k/unbalanced_train'
+audioset_unbalanced_24k/read_audiodir.dataset='audioset'

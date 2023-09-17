@@ -1,0 +1,8 @@
+tasks.data.DictDataset:
+    out_cols=['wav']
+    preprocessors=[@tasks.features.ProcessorReadAudio]
+    
+tasks.features.ProcessorReadAudio:
+    input = 'filename'
+    max_length = %MAX_AUDIO_DURATION
+    output = 'wav'
