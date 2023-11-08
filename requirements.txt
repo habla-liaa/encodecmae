@@ -5,3 +5,4 @@ librosa>=0.10.1
 numpy>=1.24.1
 pytorch_lightning>=2.0.0
 torch>=2.0.0
+torchinfo
