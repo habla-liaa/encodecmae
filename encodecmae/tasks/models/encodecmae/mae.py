@@ -89,7 +89,8 @@ class EncodecMAE(pl.LightningModule):
         x['decoder_out'] = self.decoder(x['decoder_in'], padding_mask=x['feature_padding_mask'])
 
     def predict_tokens(self,x, key_in='decoder_out'):
-        x['predicted_tokens'] = self.head(x[key_in], x['features_len'])
+        if self.head is not None:
+            x['predicted_tokens'] = self.head(x[key_in], x['features_len'])
         if self.n_extra_targets>0:
             extra_preds = self.extra_head(x[key_in], x['features_len'])
             x['predicted_tokens'] = torch.cat([x['predicted_tokens'],extra_preds],axis=2)
@@ -209,4 +210,4 @@ class EncodecMAE(pl.LightningModule):
             audio = audio.unsqueeze(0)
         with torch.no_grad():
             xi = torch.cat([self.forward_finetune({'wav': audio[:,i:i+chunk_size], 'wav_lens': torch.tensor([audio[:,i:i+chunk_size].shape[1]], device=self.device)})['visible_embeddings'] for i in range(0,audio.shape[-1],chunk_size)],axis=1)
-        return xi[0].detach().cpu().numpy()
+        return xi.detach().cpu().numpy()
