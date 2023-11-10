@@ -7,6 +7,7 @@ from huggingface_hub import hf_hub_download
 def load_model(file_path, huggingface_ckpt=None):
     model = load_encodecmae_model(file_path)
     if huggingface_ckpt is not None:
+        print('Loading checkpoint from {}'.format(huggingface_ckpt))
         repo_id = '/'.join(huggingface_ckpt.split('/')[:2])
         filename = '/'.join(huggingface_ckpt.split('/')[2:])
         ckpt_file = hf_hub_download(repo_id=repo_id,filename=filename)
