@@ -200,8 +200,9 @@ class EncodecMAE(pl.LightningModule):
             torch.nn.init.constant_(m.weight, 1.0)
 
     def extract_features_from_file(self, filename, chunk_size=4):
+        self.visible_encoder.compile=False
         x, fs = librosa.load(filename, sr=24000)
-        return self.extract_features_from_array(x, chunk_size=chunk_size)
+        return self.extract_features_from_array(x, chunk_size=chunk_size)[0]
 
     def extract_features_from_array(self, audio, chunk_size=4):
         chunk_size = int(chunk_size*24000)
