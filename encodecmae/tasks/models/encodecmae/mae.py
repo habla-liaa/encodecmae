@@ -200,13 +200,18 @@ class EncodecMAE(pl.LightningModule):
             torch.nn.init.constant_(m.weight, 1.0)
 
     def extract_features_from_file(self, filename, chunk_size=4, start=None, end=None, layer=-1):
+        self.visible_encoder.compile=False
         fs = 24000
         start = start/fs if start is not None else None
         end = end/fs if end is not None else None
         duration = end - start if (end is not None and start is not None) else None
         x, fs = librosa.load(filename, sr=fs, offset=start, duration=duration)
-        return self.extract_features_from_array(x, chunk_size=chunk_size, layer=layer)
-
+        features = self.extract_features_from_array(x, chunk_size=chunk_size, layer=layer)
+        if (features.ndim == 3) and (features.shape[0]==1):
+            return features[0]
+        else:
+            return features
+            
     def extract_features_from_array(self, audio, chunk_size=4, hop_size=4, return_type='numpy', layer=-1):
         chunk_size = int(chunk_size*24000)
         hop_size = int(hop_size*24000)
@@ -219,10 +224,6 @@ class EncodecMAE(pl.LightningModule):
         with torch.no_grad():
             acts = []
             for i in range(0,audio.shape[-1],hop_size):
-                #from IPython import embed; embed()
-                #out_i = self.forward_finetune({'wav': audio[:,i:i+chunk_size], 'wav_lens': torch.tensor([audio[:,i:i+chunk_size].shape[1]], device=self.device)})
-                #acts.append(out_i.pop('visible_embeddings'))
-                #del out_i
                 out_i = self.extract_activations({'wav': audio[:,i:i+chunk_size], 'wav_lens': torch.tensor([audio[:,i:i+chunk_size].shape[1]], device=self.device)})
                 activations = torch.stack(out_i['visible_encoder_activations']).squeeze(axis=1)
                 if layer != 'all':
