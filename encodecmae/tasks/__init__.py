@@ -150,7 +150,9 @@ def create_self_training_dataset(state, layer=-1, kmeans_samples=10000, device='
         out = out['visible_encoder_activations'][layer].cpu().numpy()
         for i in range(out.shape[0]):
             indexs = cluster_model.predict(out[i])
-            file_out = Path(state['output_dir'],'self_training_dataset','{}_{}_{}.npy'.format(Path(x['filename'][i]).stem,x['start'][i],x['stop'][i]))
+            filename = '{}_{}_{}.npy'.format(Path(x['filename'][i]).stem,x['start'][i],x['stop'][i])
+            file_out = Path(state['output_dir'],'self_training_dataset',filename[:3],filename)
+            file_out.parent.mkdir(parents=True, exist_ok=True)
             try:
                 np.save(file_out,indexs)
             except:
