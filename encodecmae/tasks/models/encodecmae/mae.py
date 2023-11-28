@@ -89,17 +89,18 @@ class EncodecMAE(pl.LightningModule):
         x['decoder_out'] = self.decoder(x['decoder_in'], padding_mask=x['feature_padding_mask'])
 
     def predict_tokens(self,x, key_in='decoder_out'):
-        x['predicted_tokens'] = self.head(x[key_in], x['features_len'])
-        if self.n_extra_targets>0:
-            extra_preds = self.extra_head(x[key_in], x['features_len'])
-            x['predicted_tokens'] = torch.cat([x['predicted_tokens'],extra_preds],axis=2)
+        if self.head is not None:
+            x['predicted_tokens'] = self.head(x[key_in], x['features_len'])
+            if self.n_extra_targets>0:
+                extra_preds = self.extra_head(x[key_in], x['features_len'])
+                x['predicted_tokens'] = torch.cat([x['predicted_tokens'],extra_preds],axis=2)
 
     def forward(self, x):
         self.encode_wav(x)
-        self.make_targets(x)
         self.mask(x)
         self.encode_visible(x)
         self.decode(x)
+        self.make_targets(x)
         self.predict_tokens(x)
 
         return x
@@ -198,15 +199,42 @@ class EncodecMAE(pl.LightningModule):
             torch.nn.init.constant_(m.bias, 0)
             torch.nn.init.constant_(m.weight, 1.0)
 
-    def extract_features_from_file(self, filename, chunk_size=4):
-        x, fs = librosa.load(filename, sr=24000)
-        return self.extract_features_from_array(x, chunk_size=chunk_size)
+    def extract_features_from_file(self, filename, chunk_size=4, start=None, end=None, layer=-1):
+        fs = 24000
+        start = start/fs if start is not None else None
+        end = end/fs if end is not None else None
+        duration = end - start if (end is not None and start is not None) else None
+        x, fs = librosa.load(filename, sr=fs, offset=start, duration=duration)
+        return self.extract_features_from_array(x, chunk_size=chunk_size, layer=layer)
 
-    def extract_features_from_array(self, audio, chunk_size=4):
+    def extract_features_from_array(self, audio, chunk_size=4, hop_size=4, return_type='numpy', layer=-1):
         chunk_size = int(chunk_size*24000)
-        audio = torch.tensor(audio, device=self.device, dtype=torch.float32)
+        hop_size = int(hop_size*24000)
+
+        if not isinstance(audio, torch.Tensor):
+            audio = torch.tensor(audio, device=self.device, dtype=torch.float32)
         if audio.ndim == 1:
             audio = audio.unsqueeze(0)
+        
         with torch.no_grad():
-            xi = torch.cat([self.forward_finetune({'wav': audio[:,i:i+chunk_size], 'wav_lens': torch.tensor([audio[:,i:i+chunk_size].shape[1]], device=self.device)})['visible_embeddings'] for i in range(0,audio.shape[-1],chunk_size)],axis=1)
-        return xi[0].detach().cpu().numpy()
+            acts = []
+            for i in range(0,audio.shape[-1],hop_size):
+                #from IPython import embed; embed()
+                #out_i = self.forward_finetune({'wav': audio[:,i:i+chunk_size], 'wav_lens': torch.tensor([audio[:,i:i+chunk_size].shape[1]], device=self.device)})
+                #acts.append(out_i.pop('visible_embeddings'))
+                #del out_i
+                out_i = self.extract_activations({'wav': audio[:,i:i+chunk_size], 'wav_lens': torch.tensor([audio[:,i:i+chunk_size].shape[1]], device=self.device)})
+                activations = torch.stack(out_i['visible_encoder_activations']).squeeze(axis=1)
+                if layer != 'all':
+                    activations = activations[layer]
+                if activations.ndim == 2:
+                    activations = activations.unsqueeze(0)
+                acts.append(activations)
+
+            xi = torch.cat(acts,axis=1)
+            if return_type == 'numpy':
+                return xi.detach().cpu().numpy()
+            elif return_type == 'torch':
+                return xi.detach()
+            else:
+                raise Exception('Unrecognized return type')
