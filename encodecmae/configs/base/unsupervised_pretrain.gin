@@ -23,6 +23,7 @@ execute_pipeline:
              @tasks.fit_model]
     execution_order = 'sequential'
 
+tasks.utils.set_seed.seed=%SEED
 train/torch.utils.data.DataLoader:
     shuffle=True
     batch_size=%TRAIN_BATCH_SIZE

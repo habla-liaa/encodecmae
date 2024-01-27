@@ -224,13 +224,21 @@ class EncodecMAE(pl.LightningModule):
         with torch.no_grad():
             acts = []
             for i in range(0,audio.shape[-1],hop_size):
-                out_i = self.extract_activations({'wav': audio[:,i:i+chunk_size], 'wav_lens': torch.tensor([audio[:,i:i+chunk_size].shape[1]], device=self.device)})
-                activations = torch.stack(out_i['visible_encoder_activations']).squeeze(axis=1)
-                if layer != 'all':
-                    activations = activations[layer]
-                if activations.ndim == 2:
-                    activations = activations.unsqueeze(0)
-                acts.append(activations)
+                if layer == -1:
+                    with torch.no_grad():
+                        x = {'wav': audio[:,i:i+chunk_size], 'wav_lens': torch.tensor([audio[:,i:i+chunk_size].shape[1]], device=self.device)}
+                        self.encode_wav(x)
+                        self.mask(x,ignore_mask=True)
+                        self.encode_visible(x)
+                        acts.append(x['visible_embeddings'])
+                else:
+                    out_i = self.extract_activations({'wav': audio[:,i:i+chunk_size], 'wav_lens': torch.tensor([audio[:,i:i+chunk_size].shape[1]], device=self.device)})
+                    activations = torch.stack(out_i['visible_encoder_activations']).squeeze(axis=1)
+                    if layer != 'all':
+                        activations = activations[layer]
+                    if activations.ndim == 2:
+                        activations = activations.unsqueeze(0)
+                    acts.append(activations)
 
             xi = torch.cat(acts,axis=1)
 
