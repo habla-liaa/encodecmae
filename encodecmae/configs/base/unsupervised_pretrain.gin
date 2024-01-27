@@ -50,6 +50,7 @@ pl.Trainer:
     num_sanity_val_steps=1
     val_check_interval=%CHECKPOINT_INTERVAL
     precision=%PRECISION
+    check_val_every_n_epoch=None
 
 pl.callbacks.ModelCheckpoint:
     dirpath=%OUTPUT_DIR

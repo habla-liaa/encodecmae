@@ -202,7 +202,7 @@ class EncodecMAE(pl.LightningModule):
     def extract_features_from_file(self, filename, chunk_size=4, start=None, end=None, layer=-1):
         self.visible_encoder.compile=False
         fs = 24000
-        start = start/fs if start is not None else None
+        start = start/fs if start is not None else 0
         end = end/fs if end is not None else None
         duration = end - start if (end is not None and start is not None) else None
         x, fs = librosa.load(filename, sr=fs, offset=start, duration=duration)
@@ -233,6 +233,7 @@ class EncodecMAE(pl.LightningModule):
                 acts.append(activations)
 
             xi = torch.cat(acts,axis=1)
+
             if return_type == 'numpy':
                 return xi.detach().cpu().numpy()
             elif return_type == 'torch':
