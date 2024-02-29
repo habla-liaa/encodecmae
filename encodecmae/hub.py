@@ -13,6 +13,8 @@ def get_model(model):
 
 def load_model(model,mode='eval',device='cuda:0'):
     #Get model files
+    config_str = gin.config_str()
+    gin.clear_config()
     ckpt_file = hf_hub_download(repo_id=models[model],filename='model.pt')
     config_file = hf_hub_download(repo_id=models[model],filename='config.gin')
     import_file = hf_hub_download(repo_id=models[model],filename='imports')
@@ -23,6 +25,7 @@ def load_model(model,mode='eval',device='cuda:0'):
     ckpt = torch.load(ckpt_file, map_location='cpu')
     model.load_state_dict(ckpt['state_dict'])
     gin.clear_config()
+    gin.parse_config(config_str)
     if mode=='eval':
         model.eval()
     model.to(device)
