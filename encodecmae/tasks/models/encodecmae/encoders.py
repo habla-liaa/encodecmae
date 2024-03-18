@@ -8,6 +8,7 @@ class EncodecEncoder(nn.Module):
         model = EncodecModel.encodec_model_24khz()
         self.model = model.encoder
         self.hop_length = self.model.hop_length
+        self.fs = 24000
         self.frozen = frozen
         if self.frozen:
             self.model.eval()
