@@ -1,0 +1,39 @@
+DEVICE='cuda:0'
+TRAIN_BATCH_SIZE=32
+TRAIN_DATALOADER_NUM_WORKERS=8
+MAX_AUDIO_DURATION=4
+FILTER_AUDIO_LENGTH=10000
+TEACHER_LAYER=-1
+POSTNORM_LAST_ACTIVATION=True
+
+$keys_not_saved+=['datasets','dataloaders']
+
+execute_pipeline:
+    tasks = [@encodecmae.tasks.utils.set_seed,
+             @encodecmae.tasks.load_model,
+             @encodecmae.tasks.data.load_dataset,
+             @encodecmae.tasks.data.get_dataloaders,
+             @encodecmae.tasks.create_st_dataset]
+
+encodecmae.tasks.load_model:
+    model = %TEACHER_MODEL
+
+encodecmae.tasks.data.get_dataloaders.dataset_cls={'train': @train/encodecmae.tasks.data.DictDataset}
+encodecmae.tasks.data.get_dataloaders.dataloader_cls={'train': @train/torch.utils.data.DataLoader}
+
+train/torch.utils.data.DataLoader:
+    shuffle=True
+    batch_size=%TRAIN_BATCH_SIZE
+    num_workers=%TRAIN_DATALOADER_NUM_WORKERS
+    collate_fn=@tasks.data.dynamic_pad_batch
+    
+encodecmae.tasks.data.DictDataset.index_mapper=@encodecmae.tasks.data.compensate_lengths
+encodecmae.tasks.data.compensate_lengths.chunk_length=%MAX_AUDIO_DURATION #This will sample long audios multiple times during one epoch (duration//compensate_framing times)
+
+encodecmae.tasks.data.load_dataset.postprocessors=[@encodecmae.tasks.data.remove_long_audios]
+encodecmae.tasks.data.remove_long_audios.limit=%FILTER_AUDIO_LENGTH
+
+encodecmae.tasks.create_st_dataset:
+    device=%DEVICE
+    layer=%TEACHER_LAYER
+    postnorm_last_activation=%POSTNORM_LAST_ACTIVATION

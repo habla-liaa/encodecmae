@@ -1,0 +1,15 @@
+NUM_TOTAL_TARGETS=1
+
+encodecmae.tasks.data.DictDataset.out_cols+=['targets']
+
+encodecmae.tasks.features.SequentialProcessor.processors+=[@encodecmae.tasks.features.LoadNumpyProcessor]
+encodecmae.tasks.features.ReadAudioProcessor.key_in = 'filename_audio'
+encodecmae.tasks.features.LoadNumpyProcessor:
+    key_in = 'filename_targets'
+    key_out = 'targets'
+
+encodecmae.models.EncodecMAE.target_encoder=@encodecmae.models.targets.IdentityTarget
+encodecmae.models.targets.IdentityTarget:
+    key_in = 'targets'
+    key_out = 'targets'
+encodecmae.models.losses.EnCodecMAEClassificationLoss.quantizer_weights=[1.]

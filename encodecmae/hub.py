@@ -1,32 +1,56 @@
-from huggingface_hub import hf_hub_download
-from .tasks.models import EncodecMAE
+from huggingface_hub import HfFileSystem, hf_hub_download
+from .models import EncodecMAE
 from ginpipe.core import gin_configure_externals
 import gin
 import torch
+from pathlib import Path
 
-models = ['base', 'small', 'base-st', 'large', 'large-st']
-models = {k: 'lpepino/encodecmae-{}'.format(k) for k in models}
+def traverse_dir(dir, result, fs):
+    for x in fs.ls(dir, refresh=True):
+        if x['name'].endswith('.pt'):
+            result.append('/'.join(x['name'].split('/')[2:]))
+        else:
+            if x['type'] == 'dir':
+                traverse_dir(x['name'], result, fs)
+
+def get_available_models():
+    fs = HfFileSystem()
+    available_models = []
+    traverse_dir('lpepino/encodecmae-v2', available_models, fs)
+    #available_models = [x['name'].split('/')[-1] for x in fs.ls('lpepino/encodecmae-pretrained/upstreams', refresh=True)]
+    return [x.split('.')[0] for x in available_models]
 
 @gin.configurable
-def get_model(model):
-    return model
+def get_model(model, processor):
+    return model, processor
 
-def load_model(model,mode='eval',device='cuda:0'):
+def load_model(model, mode='eval',device='cuda:0'):
     #Get model files
     config_str = gin.config_str()
     gin.clear_config()
-    ckpt_file = hf_hub_download(repo_id=models[model],filename='model.pt')
-    config_file = hf_hub_download(repo_id=models[model],filename='config.gin')
-    import_file = hf_hub_download(repo_id=models[model],filename='imports')
-    flag = {'module_list': [import_file]}
+    available_models = get_available_models()
+    if model in available_models:
+        model_file = hf_hub_download(repo_id='lpepino/encodecmae-v2', filename='{}.pt'.format(model))
+    else:
+        raise Exception("Available models are: {}".format(available_models))
+
+    model_state = torch.load(model_file, map_location='cpu')
+
+    flag = {'module_list_str': model_state['imports']}
     gin_configure_externals(flag)
-    gin.parse_config_file(config_file)
-    model = get_model()()
-    ckpt = torch.load(ckpt_file, map_location='cpu')
-    model.load_state_dict(ckpt['state_dict'])
+    gin.parse_config(model_state['config'])
+    model, processor = get_model()
+    model = model()
+    processor = processor()
+    model.load_state_dict(model_state['state_dict'])
     gin.clear_config()
     gin.parse_config(config_str)
     if mode=='eval':
         model.eval()
     model.to(device)
+    model.processor = processor
+    
+    #To avoid dynamic batch problems:
+    if hasattr(model.visible_encoder, 'compile'):
+        model.visible_encoder.compile=False
     return model

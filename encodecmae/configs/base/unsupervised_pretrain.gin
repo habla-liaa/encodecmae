@@ -72,5 +72,5 @@ tasks.data.dataset_random_split:
 tasks.data.DictDataset.index_mapper=@tasks.data.compensate_lengths
 tasks.data.compensate_lengths.chunk_length=%MAX_AUDIO_DURATION #This will sample long audios multiple times during one epoch (duration//compensate_framing times)
 
-tasks.data.load_dataset.filters=[@tasks.data.remove_long_audios]
+tasks.data.load_dataset.postprocessors=[@tasks.data.remove_long_audios]
 tasks.data.remove_long_audios.limit=%FILTER_AUDIO_LENGTH

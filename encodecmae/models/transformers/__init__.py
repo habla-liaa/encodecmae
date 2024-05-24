@@ -150,7 +150,14 @@ class TransformerEncoder(nn.Module):
                  init_values=None,
                  positional_encoder=None,
                  compile=True,
-                 return_activations=False):
+                 return_activations=False,
+                 key_in=None,
+                 key_padding_mask=None,
+                 key_out=None,
+                 key_transformer_in=None,
+                 key_transformer_out=None,
+                 pre_net=None,
+                 post_net=None):
         
         super().__init__()
         if ff_layer is None:
@@ -186,6 +193,14 @@ class TransformerEncoder(nn.Module):
             self.return_activations = []
         elif self.return_activations == 'all':
             self.return_activations = [i for i in range(num_layers)]
+        self.key_in = key_in
+        self.key_padding_mask = key_padding_mask
+        self.key_out = key_out
+        self.key_transformer_in = key_transformer_in
+        self.key_transformer_out = key_transformer_out
+        self.pre_net = pre_net() if pre_net is not None else None
+        self.post_net = post_net() if post_net is not None else None
+        self.residual_branch = 0
 
     def run_through_encoder(self,x):
         x, layers, padding_mask = x
@@ -198,8 +213,8 @@ class TransformerEncoder(nn.Module):
         x, layers, padding_mask = x
         for l in layers:
             x,_,_=l(x,key_mask=padding_mask)
-            activations.append(x[0])
-        return activations
+            activations.append(x[self.residual_branch])
+        return activations, x
 
     @torch.compile
     def compiled_run_through_encoder(self,x):
@@ -209,31 +224,61 @@ class TransformerEncoder(nn.Module):
     def compiled_get_activations(self,x):
         return self.extract_activations(x)
 
-    def get_activations(self,x, padding_mask):
-        if self.positional_encoder is not None:
-            x = self.positional_encoder(x)        
-        if self.compile:
-            return self.compiled_get_activations((x, self.encoder_layers, padding_mask))
-        else:
-            return self.extract_activations((x, self.encoder_layers, padding_mask))
+    def forward(self,xin, 
+                padding_mask=None, 
+                return_activations=False,
+                postnorm_last_activation=True,
+                residual_branch=0):
 
-    def forward(self,x, padding_mask):
+        self.residual_branch = residual_branch
+        if isinstance(xin, dict):
+            padding_mask = xin[self.key_padding_mask]
+            x = xin[self.key_in]
+        else:
+            x = xin
+
+        if self.pre_net is not None:
+            x = self.pre_net(x)
+
         if self.positional_encoder is not None:
             x = self.positional_encoder(x)
 
+        if isinstance(xin, dict) and (self.key_transformer_in is not None):
+            xin[self.key_transformer_in] = x
+
         if self.compile:
-            x = self.compiled_run_through_encoder((x,self.encoder_layers,padding_mask))
+            if return_activations:
+                acts, x = self.compiled_get_activations((x, self.encoder_layers, padding_mask))
+                xin[self.key_transformer_out+'_activations'] = acts
+            else:
+                x = self.compiled_run_through_encoder((x,self.encoder_layers,padding_mask))
         else:
-            x = self.run_through_encoder((x,self.encoder_layers,padding_mask))
+            if return_activations:
+                acts, x = self.extract_activations((x, self.encoder_layers, padding_mask))
+                xin[self.key_transformer_out+'_activations'] = acts
+            else:
+                x = self.run_through_encoder((x,self.encoder_layers,padding_mask))
 
         if self.norm_type == 'ResiDual':
             x = x[0] + self.final_norm(x[1])
+            if return_activations and postnorm_last_activation:
+                xin[self.key_transformer_out+'_activations'][-1] = x
         elif self.norm_type == 'prenorm':
             x = self.final_norm(x)
         else:
             pass
-        
-        return x
+
+        if isinstance(xin, dict) and (self.key_transformer_out is not None):
+            xin[self.key_transformer_out] = x
+
+        if self.post_net is not None:
+            x = self.post_net(x)
+
+        if isinstance(xin,dict):
+            xin[self.key_out] = x
+        else:
+            xin = x
+        return xin
 
 class MultiHeadAttention(nn.Module):
     def __init__(self,

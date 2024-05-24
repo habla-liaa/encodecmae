@@ -1,0 +1,44 @@
+NUM_MEL_BINS=256
+
+encodecmae.tasks.data.DictDataset:
+    out_cols=['wav','wav_features']
+    preprocessor=@encodecmae.tasks.features.SequentialProcessor
+#Processor:
+encodecmae.tasks.features.SequentialProcessor:
+    processors=[@encodecmae.tasks.features.ReadAudioProcessor, @encodecmae.tasks.features.MelspectrogramProcessor]
+encodecmae.tasks.features.ReadAudioProcessor:
+    key_in = 'filename'
+    key_out = 'wav'
+    max_length = %MAX_AUDIO_DURATION
+encodecmae.tasks.features.MelspectrogramProcessor:
+    key_in = 'wav'
+    key_out = 'wav_features'
+    sample_frequency=24000
+    frame_shift=13.28
+    frame_length=26.56
+    htk_compat=True
+    use_energy=False
+    window_type='hanning'
+    num_mel_bins=%NUM_MEL_BINS
+    dither=0.0
+    norm_stats=[-6.12, 4.82]
+    
+#Wav encoder:
+encodecmae.models.encoders.WavEncoder:
+    encoder = @torch.nn.Identity
+    post_net = @wav_encoder_proj/torch.nn.Linear
+    hop_length = 320
+    fs = 24000
+    key_in = 'wav_features'
+    key_out = 'wav_features'
+wav_encoder_proj/torch.nn.Linear:
+    in_features = %NUM_MEL_BINS
+    out_features = %MODEL_DIM
+
+#Target:
+encodecmae.models.targets.EncodecQuantizer:
+    key_in = 'wav'
+    use_encodec_encoder = True
+
+
+

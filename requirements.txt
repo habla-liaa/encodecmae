@@ -1,6 +1,6 @@
 huggingface_hub
 encodec==0.1.1
-ginpipe==0.0.1
+ginpipe==0.0.2
 librosa>=0.10.1
 numpy>=1.24.1
 pytorch_lightning>=2.0.0
