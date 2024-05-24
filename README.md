@@ -14,6 +14,7 @@ This is EnCodecMAE, an audio feature extractor pretrained with masked language m
 For more details about the architecture and pretraining procedure, read the [paper](https://arxiv.org/abs/2309.07391).
 
 ## Updates:
+- 2024/5/23 Updated paper in arxiv. New models with better performance across all downstream tasks are available for feature extraction.
 - 2024/2/29 [New code](https://github.com/mrpep/encodecmae-to-wav) to go from encodecmae to the waveform domain, with pretrained generative audio models from [this paper](https://arxiv.org/abs/2402.09318).
 - 2024/2/14 [Leveraging Pre-Trained Autoencoders for Interpretable Prototype Learning of Music Audio](https://arxiv.org/abs/2402.09318) was accepted to ICASSP 2024 XAI Workshop.
 - 2023/10/23 [Prompting for audio generation](https://mrpep.github.io/myblog/posts/audio-lm/).
