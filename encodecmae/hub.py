@@ -4,6 +4,7 @@ from ginpipe.core import gin_configure_externals
 import gin
 import torch
 from pathlib import Path
+import copy
 
 def traverse_dir(dir, result, fs):
     for x in fs.ls(dir, refresh=True):
